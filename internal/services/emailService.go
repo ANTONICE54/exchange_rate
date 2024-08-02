@@ -24,7 +24,7 @@ func NewEmailService(mailServer mailer.IMailer, emailRepo database.IEmailRepo, r
 }
 
 func (s *EmailService) SendEmails() {
-	emails, err := s.emailRepo.GetEmails()
+	emails, err := s.emailRepo.ListEmails()
 	if err != nil {
 		return
 	}

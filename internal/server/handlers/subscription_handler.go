@@ -31,7 +31,7 @@ func (h *SubscriptionHandler) Subscribe(ctx *gin.Context) {
 		ctx.Status(http.StatusBadRequest)
 	}
 
-	err := h.subscriptionRepo.Subscribe(models.Email{
+	_, err := h.subscriptionRepo.Subscribe(models.Email{
 		Email: req.Email,
 	})
 

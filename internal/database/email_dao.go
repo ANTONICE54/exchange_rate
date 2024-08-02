@@ -6,8 +6,9 @@ import (
 )
 
 type IEmailRepo interface {
-	Subscribe(email models.Email) error
-	GetEmails() ([]*models.Email, error)
+	Subscribe(email models.Email) (*models.Email, error)
+	ListEmails() ([]*models.Email, error)
+	GetByID(emailID uint) (*models.Email, error)
 }
 
 type EmailRepo struct {
@@ -20,19 +21,25 @@ func NewEmailRepo(db *sql.DB) *EmailRepo {
 	}
 }
 
-func (repo EmailRepo) Subscribe(email models.Email) error {
+func (repo EmailRepo) Subscribe(email models.Email) (*models.Email, error) {
 	query := "INSERT into emails(email) VALUES ($1)"
 
-	_, err := repo.Exec(query, email.Email)
+	row := repo.QueryRow(query, email.Email)
+	var res models.Email
 
+	err := row.Scan(
+		&res.ID,
+		&res.Email,
+		&res.CreatedAt,
+	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return &res, nil
 }
 
-func (repo EmailRepo) GetEmails() ([]*models.Email, error) {
+func (repo EmailRepo) ListEmails() ([]*models.Email, error) {
 	query := "SELECT * FROM emails"
 
 	rows, err := repo.Query(query)
@@ -58,4 +65,23 @@ func (repo EmailRepo) GetEmails() ([]*models.Email, error) {
 	}
 
 	return emails, nil
+}
+
+func (repo EmailRepo) GetByID(emailID uint) (*models.Email, error) {
+	query := "SELECT * FROM emails WHERE id = $1"
+	row := repo.QueryRow(query, emailID)
+	var email models.Email
+
+	err := row.Scan(
+		&email.ID,
+		&email.Email,
+		&email.CreatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &email, nil
+
 }

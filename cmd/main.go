@@ -38,7 +38,7 @@ func main() {
 	emailSevice := services.NewEmailService(smtpServer, emailRepo, rateProvider, mailWG)
 
 	cronOperator := cron.New()
-	cronOperator.AddFunc("00 53 10 * * *", emailSevice.SendEmails)
+	cronOperator.AddFunc("00 24 7 * * *", emailSevice.SendEmails)
 	cronOperator.Start()
 
 	app := server.NewApp(*subscHandler, *rateHandler)
