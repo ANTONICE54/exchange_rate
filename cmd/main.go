@@ -20,7 +20,11 @@ import (
 func main() {
 
 	viper.SetConfigFile(".env")
-	viper.ReadInConfig()
+	err := viper.ReadInConfig()
+
+	if err != nil {
+		log.Fatal("Failed to read config file:", err)
+	}
 
 	db := database.InitDB()
 
@@ -38,7 +42,11 @@ func main() {
 	emailSevice := services.NewEmailService(smtpServer, emailRepo, rateProvider, mailWG)
 
 	cronOperator := cron.New()
-	cronOperator.AddFunc("00 24 7 * * *", emailSevice.SendEmails)
+	err = cronOperator.AddFunc("00 24 7 * * *", emailSevice.SendEmails)
+	if err != nil {
+		log.Fatal("Failed to configure cron operation:", err)
+	}
+
 	cronOperator.Start()
 
 	app := server.NewApp(*subscHandler, *rateHandler)
