@@ -1,22 +1,26 @@
 package handlers
 
 import (
-	"log"
 	"net/http"
-	"rate/internal/database"
+	"rate/internal/apperrors"
 	"rate/internal/models"
 
 	"github.com/gin-gonic/gin"
-	"github.com/lib/pq"
 )
 
-type SubscriptionHandler struct {
-	subscriptionRepo database.IEmailRepo
+//go:generate mockgen -source=subscription_handler.go -destination=mock/subscription_handler.go
+
+type ISubscriptionService interface {
+	Subscribe(email models.Email) (*models.Email, error)
 }
 
-func NewSubscriptionHandler(subsRepo database.IEmailRepo) *SubscriptionHandler {
+type SubscriptionHandler struct {
+	subscriptionService ISubscriptionService
+}
+
+func NewSubscriptionHandler(subsService ISubscriptionService) *SubscriptionHandler {
 	return &SubscriptionHandler{
-		subscriptionRepo: subsRepo,
+		subscriptionService: subsService,
 	}
 }
 
@@ -28,21 +32,19 @@ func (h *SubscriptionHandler) Subscribe(ctx *gin.Context) {
 	var req subscribeInput
 
 	if err := ctx.BindJSON(&req); err != nil {
-		ctx.Status(http.StatusBadRequest)
+		err = apperrors.ErrBadRequest
+		ctx.JSON(apperrors.Status(err), gin.H{"error": err.Error()})
+		return
 	}
 
-	_, err := h.subscriptionRepo.Subscribe(models.Email{
+	_, err := h.subscriptionService.Subscribe(models.Email{
 		Email: req.Email,
 	})
 
 	if err != nil {
-		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code.Name() == "unique_violation" {
-			ctx.Status(http.StatusConflict)
-			return
 
-		}
-		log.Println(err)
-		ctx.Status(http.StatusInternalServerError)
+		ctx.JSON(apperrors.Status(err), gin.H{"error": err.Error()})
+
 		return
 	}
 

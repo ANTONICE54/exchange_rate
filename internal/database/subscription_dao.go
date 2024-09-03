@@ -2,27 +2,22 @@ package database
 
 import (
 	"database/sql"
+	"log"
 	"rate/internal/models"
 )
 
-type IEmailRepo interface {
-	Subscribe(email models.Email) (*models.Email, error)
-	ListEmails() ([]*models.Email, error)
-	GetByID(emailID uint) (*models.Email, error)
-}
-
-type EmailRepo struct {
+type SubscriptionRepo struct {
 	*sql.DB
 }
 
-func NewEmailRepo(db *sql.DB) *EmailRepo {
-	return &EmailRepo{
+func NewSubscriptionRepo(db *sql.DB) *SubscriptionRepo {
+	return &SubscriptionRepo{
 		db,
 	}
 }
 
-func (repo EmailRepo) Subscribe(email models.Email) (*models.Email, error) {
-	query := "INSERT into emails(email) VALUES ($1)"
+func (repo SubscriptionRepo) Create(email models.Email) (*models.Email, error) {
+	query := "INSERT into emails(email) VALUES ($1) RETURNING id, email, created_at;"
 
 	row := repo.QueryRow(query, email.Email)
 	var res models.Email
@@ -35,11 +30,11 @@ func (repo EmailRepo) Subscribe(email models.Email) (*models.Email, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	log.Println(res)
 	return &res, nil
 }
 
-func (repo EmailRepo) ListEmails() ([]*models.Email, error) {
+func (repo SubscriptionRepo) List() ([]*models.Email, error) {
 	query := "SELECT * FROM emails"
 
 	rows, err := repo.Query(query)
@@ -67,7 +62,7 @@ func (repo EmailRepo) ListEmails() ([]*models.Email, error) {
 	return emails, nil
 }
 
-func (repo EmailRepo) GetByID(emailID uint) (*models.Email, error) {
+func (repo SubscriptionRepo) GetByID(emailID uint) (*models.Email, error) {
 	query := "SELECT * FROM emails WHERE id = $1"
 	row := repo.QueryRow(query, emailID)
 	var email models.Email

@@ -6,10 +6,6 @@ import (
 	"net/smtp"
 )
 
-type IMailer interface {
-	SendEmail(email string, rate float64)
-}
-
 type SMTPServer struct {
 	host     string
 	port     string

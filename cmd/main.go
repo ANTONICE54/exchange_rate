@@ -5,6 +5,7 @@ import (
 	"rate/internal/database"
 	"rate/internal/pkg/mailer"
 	"rate/internal/pkg/provider"
+	"rate/internal/pkg/provider/chain"
 	"rate/internal/server"
 	"rate/internal/server/handlers"
 	"rate/internal/services"
@@ -30,19 +31,24 @@ func main() {
 
 	database.RunDBMigration()
 
-	emailRepo := database.NewEmailRepo(db)
-	subscHandler := handlers.NewSubscriptionHandler(emailRepo)
+	subscRepo := database.NewSubscriptionRepo(db)
+	subscService := services.NewSubscriptionService(subscRepo)
+	subscHandler := handlers.NewSubscriptionHandler(subscService)
 
-	rateProvider := provider.NewRateProvider()
-	rateHandler := handlers.NewRateHandler(rateProvider)
+	baseRateProviderNode := chain.NewProviderNode(provider.NewRateProvider())
+	secRateProviderNode := chain.NewProviderNode(provider.NewSecRateProvider())
+	baseRateProviderNode.SetNext(secRateProviderNode)
+
+	rateService := services.NewRateProviderService(baseRateProviderNode)
+	rateHandler := handlers.NewRateHandler(rateService)
 
 	smtpServer := mailer.NewSMTPServer(viper.GetString("MAILER_HOST"), viper.GetString("MAILER_PORT"), viper.GetString("MAILER_USERNAME"), viper.GetString("MAILER_PASSWORD"), viper.GetString("MAILER_FROM"))
 
 	mailWG := &sync.WaitGroup{}
-	emailSevice := services.NewEmailService(smtpServer, emailRepo, rateProvider, mailWG)
+	emailSevice := services.NewRateMailerService(smtpServer, subscRepo, baseRateProviderNode, mailWG)
 
 	cronOperator := cron.New()
-	err = cronOperator.AddFunc("00 24 7 * * *", emailSevice.SendEmails)
+	err = cronOperator.AddFunc("00 29 12 * * *", emailSevice.SendEmails)
 	if err != nil {
 		log.Fatal("Failed to configure cron operation:", err)
 	}

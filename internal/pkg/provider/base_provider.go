@@ -4,14 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 )
 
-type IRateProvider interface {
-	GetRate() (*float64, error)
+type RateProvider struct {
 }
-
-type RateProvider struct{}
 
 func NewRateProvider() *RateProvider {
 	return &RateProvider{}
@@ -27,7 +25,9 @@ func (rateP *RateProvider) GetRate() (*float64, error) {
 
 	resp, err := http.Get(url)
 	if err != nil {
+
 		return nil, err
+
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -43,6 +43,8 @@ func (rateP *RateProvider) GetRate() (*float64, error) {
 	}
 
 	rate := rateList.ConversionRates["UAH"]
+
+	log.Printf("exchangerate-api.com - got value from provider %v", rate)
 
 	return &rate, nil
 }
